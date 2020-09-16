@@ -12,12 +12,16 @@ class geo_client(bigquery.Client):
     def get_fips(self,geo_type = None,**kwargs):
         '''
         Returns an FIPS for a given type and name of US geograpy. 
-        Example: get_fips('State',State = 'New Jersey'}) returns 34
+        Examples: 
+        get_fips('State',State = 'New Jersey') returns 34
+        get_fips('County',State = 'New Jersey', County = 'Essex') returns 34013
+
         '''
         if not geo_type:
             raise ValueError('geo_type must be \'State\', or \'County\'')
 
         if geo_type == 'State':
+            #Next fix: Right now this works through a query but will be faster with a built-in dictionary lookup. 
             query = """
                 SELECT area_name, state_fips_code
                 from `bigquery-public-data.census_utility.fips_codes_all` 
@@ -31,7 +35,7 @@ class geo_client(bigquery.Client):
             return(self.query(query, job_config=job_config).to_dataframe().state_fips_code[0])
 
         if geo_type == 'County':
-            
+            #Next fix: Adding an Array lookup will make this faster when looking for a lot of counties at once. 
             try:
                 state_FIPS = self.get_fips('State',State = kwargs['State'])
             except KeyError:
@@ -51,8 +55,7 @@ class geo_client(bigquery.Client):
             )
             return(self.query(query, job_config=job_config).to_dataframe().county_fips_code[0])
 
-        print('Set geo_type to \'State\' or \'County\'')
-        return(None)
+        raise ValueError('geo_type must be \'State\', or \'County\'')
 
 
 
