@@ -14,7 +14,7 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
     time_columns = [x for x in ZRI.columns if ('20' in x)]
 
     #Any column that isn't a year in the ZRI wide format
-    other_columns = list(filter(lambda x: x not in year_columns, ZRI.columns))
+    other_columns = list(filter(lambda x: x not in time_columns, ZRI.columns))
 
     #Turns the RegionName from an in integer to a 5-digit string
     ZRI = ZRI.assign(RegionName =  ZRI['RegionName'].astype(str).apply(FixID))
@@ -29,7 +29,8 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
     ZRI_long['Year'] = ZRI_long.loc[:,'Date'].apply(lambda x: int(x[1:5]))
     ZRI_long['Quarter'] = ZRI_long.loc[:,'Month'].apply(lambda x: 1+(x-1)//3)
 
-    #Adds the index of the final observations: 'tyyyyrrrrr', the first digit or two are time_unit, then year then regionID
+    #Adds the index of the final observations: 'tyyyyrrrrr', the first digit or two are time_unit, 
+    #then 4 digits for year then regionID (no t if year is time_unit)
     if time_unit == 'Year':
         ZRI_long = ZRI_long.assign(new_index =  ZRI_long.Year.astype(str) 
                                       + ZRI_long.RegionName.astype(str))
@@ -40,13 +41,22 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
 
     #groups by the new index and aggregates
     ZRI_long = ZRI_long.groupby('new_index').mean().reset_index()
+    ZRIs = ZRI_long[['ZRI','new_index']].set_index('new_index')
 
     #creates new columns equal to the previous time_units ZRI, also stepped back by future_time
     for i in range(0,window_size):
-        column_name = f'ZRI - {i}'
+        column_name = f'ZRI - {future_time+i}'
         next_indices = ZRI_long.new_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = future_time+i))
-        ZRI_long[column_name] = [try_index(ZRI_long,j) for j in next_indices]
-        #NOTE this is incredibly slow at the moment. Think about better ways to handle the above line
+        too_old_i = set(next_indices) - set(ZRI_long.new_index) 
+        i_dict = {i:(i not in too_old_i) for i in next_indices}
+        ZRI_long[column_name] = [ZRIs.loc[i].iloc[0] if i_dict[i] else np.nan for i in next_indices]
+
+    #Clean for final formatting
+    time_unit_list = ['Month','Year','Quarter']
+    drop_times = [time for time in time_unit_list if time != time_unit]
+    ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI'},axis = 1)
+    ZRI_long['ZipCode'] = ZRI_long['new_index'].apply(lambda x: x[-5:])
+
     return(ZRI_long)
 
 def try_index(df,index):
