@@ -45,29 +45,21 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
 
     #creates new columns equal to the previous time_units ZRI, also stepped back by future_time
     for i in range(0,window_size):
-        column_name = f'ZRI - {future_time+i} {time_unit}s'
+        column_name = f'ZRI_minus_{future_time+i}{time_unit[0]}'
         next_indices = ZRI_long.new_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = future_time+i))
         too_old_i = set(next_indices) - set(ZRI_long.new_index) 
         i_dict = {i:(i not in too_old_i) for i in next_indices}
         ZRI_long[column_name] = [ZRIs.loc[i].iloc[0] if i_dict[i] else np.nan for i in next_indices]
 
     #Clean for final formatting
-    time_unit_list = ['Month','Year','Quarter']
+    time_unit_list = ['Month','Quarter']
     drop_times = [time for time in time_unit_list if time != time_unit]
     ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI','new_index':'Target_index'},axis = 1)
     ZRI_long['ZipCode'] = ZRI_long['Target_index'].apply(lambda x: x[-5:])
 
     return(ZRI_long)
 
-def try_index(df,index):
-    '''
-    Tries to access data in a dataframe. If it isn't there retun a nan value 
-    (this happens when there isn't a time index, i.e. it goes too far back)
-    '''
-    past_ZRI = df.ZRI[df.new_index == index]
-    if not past_ZRI.empty:
-        return(past_ZRI.iloc[0])
-    return(np.nan)
+
 
 
 def past_index(target_index, time_unit, units_back):
