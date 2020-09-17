@@ -76,19 +76,18 @@ def past_index(target_index, time_unit, units_back):
         return(str(int(year)-units_back)+region)
     elif time_unit == 'Month':
         prev_time = int(target_index[0:-9])-units_back
-        if prev_time<=0:
-            year = str(int(year)-1)
-        return(months[prev_time-1]+year+region)
+        years_back = -(prev_time//12)
+        year = str(int(year)-years_back)
+        return(months[prev_time+(12*years_back)-1]+year+region)
     else:
         if time_unit != 'Quarter':
             raise ValueError('time_unit must be Month, Quarter, or Year')
 
         prev_time = int(target_index[0:-9])-units_back
+        years_back = -(prev_time//4)
+        year = str(int(year)-years_back)
 
-        if prev_time<=0:
-            year = str(int(year)-1)
-
-        return(quarters[prev_time-1]+year+region)
+        return(quarters[prev_time+(4*years_back)-1]+year+region)
         
 
 
