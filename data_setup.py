@@ -45,7 +45,7 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
 
     #creates new columns equal to the previous time_units ZRI, also stepped back by future_time
     for i in range(0,window_size):
-        column_name = f'ZRI - {future_time+i}'
+        column_name = f'ZRI - {future_time+i} {time_unit}s'
         next_indices = ZRI_long.new_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = future_time+i))
         too_old_i = set(next_indices) - set(ZRI_long.new_index) 
         i_dict = {i:(i not in too_old_i) for i in next_indices}
@@ -54,8 +54,8 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
     #Clean for final formatting
     time_unit_list = ['Month','Year','Quarter']
     drop_times = [time for time in time_unit_list if time != time_unit]
-    ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI'},axis = 1)
-    ZRI_long['ZipCode'] = ZRI_long['new_index'].apply(lambda x: x[-5:])
+    ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI','new_index':'Target_index'},axis = 1)
+    ZRI_long['ZipCode'] = ZRI_long['Target_index'].apply(lambda x: x[-5:])
 
     return(ZRI_long)
 
