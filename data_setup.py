@@ -2,13 +2,13 @@ import pandas as pd
 import numpy as np
 
 
-def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
+def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, percent_change = None):
     '''
     Takes in a ZRI dataframe (in the wide format directly from bigquery) and specifications for the final shape of 
     the data to use in a machine learning model. 
     time_unit specifies the unit of time to use in the model, default is Month, must be Month, Quarter or Year
     window_size specifies the number of time units in the past to use. Default is 1
-    future_time specifies the number of time unites in the future to predict. In this formulation the current ZRI will be the target. 
+    future_time specifies the number of time units in the future to predict. In this formulation the current ZRI will be the target. 
     '''
     #Columns which specify a time in the ZRI wide format
     time_columns = [x for x in ZRI.columns if ('20' in x)]
@@ -41,6 +41,14 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1):
 
     #groups by the new index and aggregates
     ZRI_long = ZRI_long.groupby('new_index').mean().reset_index()
+
+    if percent_change:
+        next_indices = ZRI_long.new_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = 1))
+        too_old_i = set(next_indices) - set(ZRI_long.new_index) 
+        i_dict = {i:(i not in too_old_i) for i in next_indices}
+        ZRIs = ZRI_long[['ZRI','new_index']].set_index('new_index')
+        ZRI_long['ZRI'] = [(ZRIs.iloc[j].iloc[0] - ZRIs.loc[i].iloc[0])/ZRIs.loc[i].iloc[0] if i_dict[i] else 0 for j,i in enumerate(next_indices)]
+
     ZRIs = ZRI_long[['ZRI','new_index']].set_index('new_index')
 
     #creates new columns equal to the previous time_units ZRI, also stepped back by future_time
