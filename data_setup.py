@@ -29,15 +29,16 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, perce
     ZRI_long['Year'] = ZRI_long.loc[:,'Date'].apply(lambda x: int(x[1:5]))
     ZRI_long['Quarter'] = ZRI_long.loc[:,'Month'].apply(lambda x: 1+(x-1)//3)
 
-    #Adds the index of the final observations: 'tyyyyrrrrr', the first digit or two are time_unit, 
-    #then 4 digits for year then regionID (no t if year is time_unit)
+    #Adds the index of the final observations: 'ZZZZZTUYYYYY'
     if time_unit == 'Year':
-        ZRI_long = ZRI_long.assign(new_index =  ZRI_long.Year.astype(str) 
-                                      + ZRI_long.RegionName.astype(str))
+        ZRI_long = ZRI_long.assign(new_index =  ZRI_long.RegionName.astype(str) +'Y' +
+                                                  ZRI_long.Year.astype(str))
     else:
-        ZRI_long = ZRI_long.assign(new_index = ZRI_long[time_unit].astype(str) 
-                   + ZRI_long.Year.astype(str)
-                   + ZRI_long.RegionName.astype(str))
+        ZRI_long = ZRI_long.assign(new_index = ZRI_long.RegionName.astype(str) +
+                                           time_unit[0] +
+                                           ZRI_long[time_unit].astype(str) +
+                                           'Y' +
+                                           ZRI_long.Year.astype(str) )
 
     #groups by the new index and aggregates
     ZRI_long = ZRI_long.groupby('new_index').mean().reset_index()
@@ -45,9 +46,9 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, perce
     if percent_change:
         next_indices = ZRI_long.new_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = 1))
         too_old_i = set(next_indices) - set(ZRI_long.new_index) 
-        i_dict = {i:(i not in too_old_i) for i in next_indices}
+        diff_dict = {ZRI_long.new_index.iloc[i] :(j if (j not in too_old_i) else ZRI_long.new_index.iloc[i]) for i,j in enumerate(next_indices)}
         ZRIs = ZRI_long[['ZRI','new_index']].set_index('new_index')
-        ZRI_long['ZRI'] = [(ZRIs.iloc[j].iloc[0] - ZRIs.loc[i].iloc[0])/ZRIs.loc[i].iloc[0] if i_dict[i] else 0 for j,i in enumerate(next_indices)]
+        ZRI_long['ZRI'] = [(ZRIs.loc[i].iloc[0] - ZRIs.loc[j].iloc[0])/ZRIs.loc[j].iloc[0] for (i,j) in diff_dict.items()]
 
     ZRIs = ZRI_long[['ZRI','new_index']].set_index('new_index')
 
@@ -71,31 +72,32 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, perce
 
 
 def past_index(target_index, time_unit, units_back):
-    #Returns new_index of previous 
-    #Need an empty logic statement
+    '''
+    Takes in an index in ZipcodeTime (ZZZZZTUYYYYY) Z = Zipcode, T = type of time, U = the value of time, Y = year (with leading 'Y')
+    and returns a valid index for the time n units_back
+    '''
 
-    #NEED TO DO A BETTER JOB WITH THE INDEXING, IT MIGHT LOOP THROUGH MULTIPLE TIMES ETC>>>>>
     months = list(map(str,range(1,13)))
     quarters = list(map(str, range(1,5)))
-    region = target_index[-5:]
-    year = target_index[-9:-5]
+    region = target_index[:5]
+    year = target_index[-4:]
 
     if time_unit == 'Year':
-        return(str(int(year)-units_back)+region)
+        return(region + 'Y' + str(int(year)-units_back))
     elif time_unit == 'Month':
-        prev_time = int(target_index[0:-9])-units_back
+        prev_time = int(target_index[target_index.index('M')+1:target_index.index('Y')])-units_back
         years_back = -(prev_time//12)
         year = str(int(year)-years_back)
-        return(months[prev_time+(12*years_back)-1]+year+region)
+        return(region + 'M' + months[prev_time+(12*years_back)-1]+ 'Y'+year)
     else:
         if time_unit != 'Quarter':
             raise ValueError('time_unit must be Month, Quarter, or Year')
 
-        prev_time = int(target_index[0:-9])-units_back
+        prev_time = int(target_index[target_index.index('Q')+1:target_index.index('Y')])-units_back
         years_back = -(prev_time//4)
         year = str(int(year)-years_back)
 
-        return(quarters[prev_time+(4*years_back)-1]+year+region)
+        return(region + 'Q' + quarters[prev_time+(4*years_back)-1]+'Y' + year)
         
 
 
