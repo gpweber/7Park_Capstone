@@ -66,10 +66,13 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, perce
     ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI','new_index':'Target_index'},axis = 1)
     ZRI_long['ZipCode'] = ZRI_long['Target_index'].apply(lambda x: x[:5])
 
+    predict_indices = ZRI_long.Target_index.apply(lambda x: past_index(x, time_unit = time_unit, units_back = future_time))
+    ZRI_long = ZRI_long.assign(Predict_Year = [x[-4:] for x in predict_indices])
+    if time_unit != 'Year':
+        ZRI_long['Predict_'+time_unit] = [x[x.index(time_unit[0])+1:x.index('Y')] for x in predict_indices]
+
+
     return(ZRI_long)
-
-
-
 
 def past_index(target_index, time_unit, units_back):
     '''
