@@ -64,7 +64,7 @@ def ZRI_format(ZRI, time_unit = 'Month', window_size = 1, future_time = 1, perce
     time_unit_list = ['Month','Quarter']
     drop_times = [time for time in time_unit_list if time != time_unit]
     ZRI_long = ZRI_long.drop(drop_times + ['RegionID','SizeRank'],axis = 1).rename({'ZRI' : 'Target_ZRI','new_index':'Target_index'},axis = 1)
-    ZRI_long['ZipCode'] = ZRI_long['Target_index'].apply(lambda x: x[-5:])
+    ZRI_long['ZipCode'] = ZRI_long['Target_index'].apply(lambda x: x[:5])
 
     return(ZRI_long)
 
