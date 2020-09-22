@@ -106,13 +106,13 @@ def past_index(target_index, time_unit, units_back):
 
 
     
-def FixID(geoid):
+def FixID(geoid,length = 5):
     '''
     Returns a 5 digit string of an integer representation of an FIPS geoID
     '''
 
     geoid = str(int(geoid))
-    geoid = '0'*(5-len(geoid)) + geoid
+    geoid = '0'*(length-len(geoid)) + geoid
     return(geoid)
 
 
